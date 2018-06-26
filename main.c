@@ -120,6 +120,19 @@ void eraseCar()
 			GLCD_PutPixel(i+2, j+6+lane*48);
 }
 
+void smokePot(int l)
+{
+	int i, j;
+	GLCD_SetTextColor(0);
+	for(i = -15; i < 16; i++)
+		for(j = -15; j < 16; j++)
+		{
+			if(i*i + j*j <= 256)
+				GLCD_PutPixel(i+25, j+24+l*48);
+			
+		}
+}
+
 // change lanes
 __task void moveCar (void)
 {
@@ -170,7 +183,7 @@ int main()
 		}
 		drawCar();
 		//while(((LPC_GPIO1->FIOPIN & 0x00800000) != 0x00800000) || (((LPC_GPIO1->FIOPIN & 0x02000000) != 0x02000000))) {}
-
+		smokePot(4);
 		
 	}
 	
