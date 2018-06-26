@@ -59,11 +59,55 @@ void drawLanes()
 void drawCar()
 {
 	int i, j;
-	GLCD_SetTextColor(63488);
+	// Black
+	GLCD_SetTextColor(0);
+	// Axles
+	for(i = 0; i < 4; i++)
+		for(j = 0; j < 4; j++)
+			GLCD_PutPixel(i+10, j+10+lane*48);
 	
-	for(i = 0; i < 10; i++)
-		for(j = 0; j < 10; j++)
-			GLCD_PutPixel(i+18, j+19+lane*48);
+	for(i = 0; i < 4; i++)
+		for(j = 0; j < 4; j++)
+			GLCD_PutPixel(i+22, j+10+lane*48);
+	
+	for(i = 0; i < 4; i++)
+		for(j = 0; j < 4; j++)
+			GLCD_PutPixel(i+10, j+34+lane*48);
+	
+	for(i = 0; i < 4; i++)
+		for(j = 0; j < 4; j++)
+			GLCD_PutPixel(i+22, j+34+lane*48);
+	// Wheels
+	for(i = 0; i < 8; i++)
+		for(j = 0; j < 4; j++)
+			GLCD_PutPixel(i+8, j+6+lane*48);
+	
+	for(i = 0; i < 8; i++)
+		for(j = 0; j < 4; j++)
+			GLCD_PutPixel(i+20, j+6+lane*48);
+	
+	for(i = 0; i < 8; i++)
+		for(j = 0; j < 4; j++)
+			GLCD_PutPixel(i+8, j+38+lane*48);
+			
+	for(i = 0; i < 8; i++)
+		for(j = 0; j < 4; j++)
+			GLCD_PutPixel(i+20, j+38+lane*48);
+			
+	// Red
+	GLCD_SetTextColor(63488);
+	// Body
+	for(i = 0; i < 24; i++)
+		for(j = 0; j < 20; j++)
+			GLCD_PutPixel(i+6, j+14+lane*48);
+	// Neck		
+	for(i = 0; i < 12; i++)
+		for(j = 0; j < 8; j++)
+			GLCD_PutPixel(i+30, j+20+lane*48);
+	//Spoiler
+	for(i = 0; i < 8; i++)
+		for(j = 0; j < 36; j++)
+			GLCD_PutPixel(i+38, j+6+lane*48);
 }
 
 void eraseCar()
@@ -71,9 +115,9 @@ void eraseCar()
 	int i, j;
 	GLCD_SetTextColor(31727);
 	
-	for(i = 0; i < 10; i++)
-		for(j = 0; j < 10; j++)
-			GLCD_PutPixel(i+18, j+19+lane*48);
+	for(i = 0; i < 44; i++)
+		for(j = 0; j < 36; j++)
+			GLCD_PutPixel(i+2, j+6+lane*48);
 }
 
 // change lanes
