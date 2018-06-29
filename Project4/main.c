@@ -187,22 +187,20 @@ __task void moveObst (void)
 }
 __task void changeSpeed()
 {
+	LPC_PINCON->PINSEL1 &= ~(0x03<<18);
+	LPC_PINCON->PINSEL1 |= (0x01<<18);
+	LPC_SC->PCONP |= 0x00001000;
+	LPC_ADC->ADCR = (1 << 2) | (4 << 8) | (1 << 21); 
 	while(1)
 	{
-		LPC_PINCON->PINSEL1 &= ~(0x03<<18);
-		LPC_PINCON->PINSEL1 |= (0x01<<18);
-		LPC_SC->PCONP |= 0x00001000;
-		LPC_ADC->ADCR = (1 << 2) | (4 << 8) | (1 << 21); 
-		while(1)
+		LPC_ADC->ADCR |= 0x01000000;
+		if(LPC_ADC->ADGDR & 0x80000000)
 		{
-			LPC_ADC->ADCR |= 0x01000000;
-			if(LPC_ADC->ADGDR & 0x80000000)
-			{
-				printf("potentiometer: %d\n\n", (LPC_ADC->ADGDR & 0x0000FFF0) >> 4); 
-				speed = (LPC_ADC->ADGDR & 0x0000FFF0) >> 4;
-			}
-			GLCD_DisplayString(5, 4, 1, speed + '0');
+			printf("potentiometer: %d\n\n", (LPC_ADC->ADGDR & 0x0000FFF0) >> 4); 
+			speed = (LPC_ADC->ADGDR & 0x0000FFF0) >> 4;
+			printf("%d", speed);
 		}
+		os_tsk_pass();
 	}
 }
 
@@ -217,7 +215,7 @@ __task void start_tasks()
 
 int main() 
 {
-	printf("start");
+	printf("HENLO");
 	init();
 	lane = 0;
 	drawLanes();

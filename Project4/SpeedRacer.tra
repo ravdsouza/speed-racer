@@ -18,7 +18,7 @@ c:\Software\Keil\ARM\RV31\LIB\RTX_CM3.LIB --library_type=microlib --strict --sca
 ### ADS-LD Output File: 'SpeedRacer.axf'
 ### ADS-LD Command File: 'SpeedRacer.lnp'
 ### Checking for dirty Components...
-### Creating CmdFile 'SpeedRacer.lnp', Handle=0x00000B4C
+### Creating CmdFile 'SpeedRacer.lnp', Handle=0x00000944
 ### Writing '.lnp' file
 ### ADS-LD Command file 'SpeedRacer.lnp' is ready.
 ### ADS-LD: About to start ADS-LD Thread.

@@ -3,11 +3,11 @@
 <title>Static Call Graph - [N:\MTE241\Project4\SpeedRacer.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image N:\MTE241\Project4\SpeedRacer.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5.02 [Build 28]: Last Updated: Thu Jun 28 21:32:47 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5.02 [Build 28]: Last Updated: Thu Jun 28 21:49:40 2018
 <BR><P>
-<H3>Maximum Stack Usage =        160 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
+<H3>Maximum Stack Usage =        104 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
-changeSpeed &rArr; GLCD_DisplayString &rArr; GLCD_DisplayChar &rArr; GLCD_DrawChar &rArr; GLCD_SetWindow &rArr; wr_reg &rArr; wr_dat
+main &rArr; drawLanes &rArr; GLCD_Clear &rArr; GLCD_WindowMax &rArr; GLCD_SetWindow &rArr; wr_reg &rArr; wr_dat
 <P>
 <H3>
 Mutually Recursive functions
@@ -419,10 +419,8 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[6a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;drawLanes
 </UL>
 
-<P><STRONG><a name="[56]"></a>GLCD_DrawChar</STRONG> (Thumb, 150 bytes, Stack size 56 bytes, glcd_spi_lpc1700.o(.text))
-<BR><BR>[Stack]<UL><LI>Max Depth = 112<LI>Call Chain = GLCD_DrawChar &rArr; GLCD_SetWindow &rArr; wr_reg &rArr; wr_dat
-</UL>
-<BR>[Calls]<UL><LI><a href="#[4f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GLCD_SetWindow
+<P><STRONG><a name="[56]"></a>GLCD_DrawChar</STRONG> (Thumb, 150 bytes, Stack size 56 bytes, glcd_spi_lpc1700.o(.text), UNUSED)
+<BR><BR>[Calls]<UL><LI><a href="#[4f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GLCD_SetWindow
 <LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;wr_dat_only
 <LI><a href="#[55]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;wr_dat_stop
 <LI><a href="#[53]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;wr_dat_start
@@ -431,21 +429,16 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[57]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GLCD_DisplayChar
 </UL>
 
-<P><STRONG><a name="[57]"></a>GLCD_DisplayChar</STRONG> (Thumb, 84 bytes, Stack size 24 bytes, glcd_spi_lpc1700.o(.text))
-<BR><BR>[Stack]<UL><LI>Max Depth = 136<LI>Call Chain = GLCD_DisplayChar &rArr; GLCD_DrawChar &rArr; GLCD_SetWindow &rArr; wr_reg &rArr; wr_dat
-</UL>
-<BR>[Calls]<UL><LI><a href="#[56]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GLCD_DrawChar
+<P><STRONG><a name="[57]"></a>GLCD_DisplayChar</STRONG> (Thumb, 84 bytes, Stack size 24 bytes, glcd_spi_lpc1700.o(.text), UNUSED)
+<BR><BR>[Calls]<UL><LI><a href="#[56]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GLCD_DrawChar
 </UL>
 <BR>[Called By]<UL><LI><a href="#[58]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GLCD_DisplayString
 </UL>
 
-<P><STRONG><a name="[58]"></a>GLCD_DisplayString</STRONG> (Thumb, 40 bytes, Stack size 24 bytes, glcd_spi_lpc1700.o(.text))
-<BR><BR>[Stack]<UL><LI>Max Depth = 160<LI>Call Chain = GLCD_DisplayString &rArr; GLCD_DisplayChar &rArr; GLCD_DrawChar &rArr; GLCD_SetWindow &rArr; wr_reg &rArr; wr_dat
+<P><STRONG><a name="[58]"></a>GLCD_DisplayString</STRONG> (Thumb, 40 bytes, Stack size 24 bytes, glcd_spi_lpc1700.o(.text), UNUSED)
+<BR><BR>[Calls]<UL><LI><a href="#[57]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GLCD_DisplayChar
 </UL>
-<BR>[Calls]<UL><LI><a href="#[57]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GLCD_DisplayChar
-</UL>
-<BR>[Called By]<UL><LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;changeSpeed
-<LI><a href="#[59]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GLCD_ClearLn
+<BR>[Called By]<UL><LI><a href="#[59]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GLCD_ClearLn
 </UL>
 
 <P><STRONG><a name="[59]"></a>GLCD_ClearLn</STRONG> (Thumb, 94 bytes, Stack size 80 bytes, glcd_spi_lpc1700.o(.text), UNUSED)
@@ -621,14 +614,13 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[72]"></a>changeSpeed</STRONG> (Thumb, 110 bytes, Stack size 0 bytes, main.o(.text))
-<BR><BR>[Stack]<UL><LI>Max Depth = 160<LI>Call Chain = changeSpeed &rArr; GLCD_DisplayString &rArr; GLCD_DisplayChar &rArr; GLCD_DrawChar &rArr; GLCD_SetWindow &rArr; wr_reg &rArr; wr_dat
+<BR><BR>[Stack]<UL><LI>Max Depth = 24<LI>Call Chain = changeSpeed &rArr; __2printf
 </UL>
-<BR>[Calls]<UL><LI><a href="#[58]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;GLCD_DisplayString
-<LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2printf
+<BR>[Calls]<UL><LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2printf
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> main.o(.text)
 </UL>
-<P><STRONG><a name="[75]"></a>start_tasks</STRONG> (Thumb, 104 bytes, Stack size 0 bytes, main.o(.text))
+<P><STRONG><a name="[75]"></a>start_tasks</STRONG> (Thumb, 100 bytes, Stack size 0 bytes, main.o(.text))
 <BR>[Address Reference Count : 1]<UL><LI> main.o(.text)
 </UL>
 <P><STRONG><a name="[2d]"></a>main</STRONG> (Thumb, 44 bytes, Stack size 8 bytes, main.o(.text))
