@@ -10,6 +10,8 @@
 // global variables
 int lane; // 0 - 4
 int speed;
+int oneY;
+int oneX;
 
 // initialize everything
 void init(void)
@@ -109,7 +111,7 @@ void drawCar()
 		for(j = 0; j < 36; j++)
 			GLCD_PutPixel(i+38, j+6+lane*48);
 }
-
+ 
 void eraseCar()
 {
 	int i, j;
@@ -120,7 +122,7 @@ void eraseCar()
 			GLCD_PutPixel(i+2, j+6+lane*48);
 }
 
-void smokePot(int l)
+void drawPot(int l)
 {
 	int i, j;
 	GLCD_SetTextColor(0);
@@ -140,31 +142,27 @@ __task void moveCar (void)
 	{
 		if (((LPC_GPIO1->FIOPIN & 0x00800000) != 0x00800000) && lane != 0)
 		{
+			eraseCar();
 			lane--;
+			drawCar();
+			while(((LPC_GPIO1->FIOPIN & 0x00800000) != 0x00800000)) {}
 		}
-		else if (((LPC_GPIO1->FIOPIN & 0x02000000) != 0x02000000) && lane != 4)
+		if (((LPC_GPIO1->FIOPIN & 0x02000000) != 0x02000000) && lane != 4)
 		{
+			eraseCar();
 			lane++;
+			drawCar();
+			while((((LPC_GPIO1->FIOPIN & 0x02000000) != 0x02000000))) {}
 		}
 		drawCar();
-		while(((LPC_GPIO1->FIOPIN & 0x00800000) != 0x00800000) || (((LPC_GPIO1->FIOPIN & 0x02000000) != 0x02000000)))
-		{}
+		//while(((LPC_GPIO1->FIOPIN & 0x00800000) != 0x00800000) || (((LPC_GPIO1->FIOPIN & 0x02000000) != 0x02000000))) {}
+		drawPot(4);
+		os_tsk_pass();		
 	}
 }
 
-__task void start_tasks()
+__task void moveObst (void)
 {
-	os_tsk_create(moveCar, 1);
-	while(1);
-}
-
-int main() 
-{
-	init();
-	lane = 0;
-	drawLanes();
-	//os_sys_init(start_tasks);
-	
 	while(1)
 	{
 		if (((LPC_GPIO1->FIOPIN & 0x00800000) != 0x00800000) && lane != 0)
@@ -183,9 +181,42 @@ int main()
 		}
 		drawCar();
 		//while(((LPC_GPIO1->FIOPIN & 0x00800000) != 0x00800000) || (((LPC_GPIO1->FIOPIN & 0x02000000) != 0x02000000))) {}
-		smokePot(4);
-		
+		drawPot(4);
+		os_tsk_pass();		
 	}
-	
+}
+__task void changeSpeed()
+{
+	LPC_PINCON->PINSEL1 &= ~(0x03<<18);
+	LPC_PINCON->PINSEL1 |= (0x01<<18);
+	LPC_SC->PCONP |= 0x00001000;
+	LPC_ADC->ADCR = (1 << 2) | (4 << 8) | (1 << 21); 
+	while(1)
+	{
+		LPC_ADC->ADCR |= 0x01000000;
+		if(LPC_ADC->ADGDR & 0x80000000)
+		{
+			printf("potentiometer: %d\n\n", (LPC_ADC->ADGDR & 0x0000FFF0) >> 4); 
+			speed = (LPC_ADC->ADGDR & 0x0000FFF0) >> 4;
+			printf("%d", speed);
+		}
+		os_tsk_pass();
+	}
+}
+
+__task void start_tasks()
+{
+	//os_tsk_create(changeSpeed, 1);
+	os_tsk_create(moveCar, 1);
+	while(1);
+}
+
+int main() 
+{
+	printf("HENLO");
+	init();
+	lane = 0;
+	drawLanes();
+	os_sys_init(start_tasks);
 	return 0;
 }
