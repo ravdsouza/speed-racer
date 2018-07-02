@@ -13,6 +13,17 @@ int speed;
 int oneY;
 int oneX;
 
+// obstacle struct
+// id: 0 pothole, 1 bird
+typedef struct
+{
+	int id;
+	int division;
+	int lane;
+} obs_t;
+
+obs_t obstacles[4];
+
 // initialize everything
 void init(void)
 {
@@ -122,6 +133,7 @@ void eraseCar()
 			GLCD_PutPixel(i+2, j+6+lane*48);
 }
 
+// potholes
 void drawPot(int l)
 {
 	int i, j;
@@ -206,17 +218,45 @@ __task void changeSpeed()
 
 __task void start_tasks()
 {
-	//os_tsk_create(changeSpeed, 1);
+	os_tsk_create(changeSpeed, 1);
 	os_tsk_create(moveCar, 1);
 	while(1);
 }
 
-int main() 
+void updateObs(void)
 {
-	printf("HENLO");
+	int r1;
+	int r2, d1, d2, l1, l2;
+	
+	// randomly generate IDs for 2 new obstables
+	r1 = rand() % 2;
+	d1 = rand() % 11; //replace 11 w number of divisions
+	l1 = rand() % 5;
+	
+	r2 = rand() % 2;
+	d2 = rand() % 11; //replace 11 w number of divisions
+	l2 = rand() % 5;
+	
+	obstacles[0] = obstacles[2];
+	obstacles[1] = obstacles[3];
+	
+	obstacles[2].id = r1;
+	obstacles[2].division = d1;
+	obstacles[2].lane= l1;
+	
+	obstacles[2].id = r2;
+	obstacles[2].division = d2;
+	obstacles[2].lane= l2;
+}
+
+int main() 
+{	
+	printf("init");
 	init();
 	lane = 0;
 	drawLanes();
+	
 	os_sys_init(start_tasks);
+	
 	return 0;
 }
