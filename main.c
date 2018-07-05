@@ -7,6 +7,13 @@
 #include "GLCD.h"
 #include <RTL.h>
 
+
+
+// delay: 		os_dly_wait(300);
+
+
+
+
 // global variables
 int lane; // 0 - 4
 int speed;
@@ -23,6 +30,8 @@ typedef struct
 } obs_t;
 
 obs_t obstacles[4];
+obs_t pot;
+
 
 // initialize everything
 void init(void)
@@ -123,7 +132,7 @@ void drawCar()
 			GLCD_PutPixel(i+38, j+6+lane*48);
 }
  
-void eraseCar()
+void eraseCar( )
 {
 	int i, j;
 	GLCD_SetTextColor(31727);
@@ -133,8 +142,18 @@ void eraseCar()
 			GLCD_PutPixel(i+2, j+6+lane*48);
 }
 
+void eraseObs(obs_t ob)
+{
+	int i, j;
+	GLCD_SetTextColor(31727);
+	
+	for(i = 0; i < 44; i++)
+		for(j = 0; j < 44; j++)
+			GLCD_PutPixel(ob.division*44+2, j+6+ob.lane*48);
+}
+
 // potholes
-void drawPot(int l)
+void drawPot(obs_t p)
 {
 	int i, j;
 	GLCD_SetTextColor(0);
@@ -142,8 +161,7 @@ void drawPot(int l)
 		for(j = -15; j < 16; j++)
 		{
 			if(i*i + j*j <= 256)
-				GLCD_PutPixel(i+25, j+24+l*48);
-			
+				GLCD_PutPixel(i+25+p.division*44, j+24+p.lane*48);
 		}
 }
 
@@ -168,7 +186,16 @@ __task void moveCar (void)
 		}
 		drawCar();
 		//while(((LPC_GPIO1->FIOPIN & 0x00800000) != 0x00800000) || (((LPC_GPIO1->FIOPIN & 0x02000000) != 0x02000000))) {}
-		drawPot(4);
+		
+		
+		/*
+		pot.lane = 2;
+		pot.division = 6;
+		pot.id = 0;
+		drawPot(pot);
+		os_dly_wait(30);
+		eraseObs(pot);
+		*/
 		os_tsk_pass();		
 	}
 }
@@ -193,15 +220,48 @@ __task void moveObst (void)
 		}
 		drawCar();
 		//while(((LPC_GPIO1->FIOPIN & 0x00800000) != 0x00800000) || (((LPC_GPIO1->FIOPIN & 0x02000000) != 0x02000000))) {}
-		drawPot(4);
+//		drawPot(4);
 		os_tsk_pass();		
 	}
 }
+
+// move obstacles down the LCD
+__task void moveObs(void)
+{
+	int i;
+	while(1)
+	{
+		for (i = 0; i < 4; i++)
+		{
+			if (obstacles[i].id == 0)
+				drawPot(obstacles[i]);
+			//else
+				//drawBird(obstacles[i]);
+		}
+		
+		os_dly_wait(30);
+		
+		for (i = 0; i < 4; i++)
+		{
+			eraseObs(obstacles[i]);
+			obstacles[i].division--;
+			
+			if (obstacles[i].id == 0)
+				drawPot(obstacles[i]);
+			//else
+			//drawBird(obstacles[i]);			
+		}		
+		
+		os_tsk_pass();
+	}
+}
+
+/*
 __task void changeSpeed()
 {
 	LPC_PINCON->PINSEL1 &= ~(0x03<<18);
 	LPC_PINCON->PINSEL1 |= (0x01<<18);
-	LPC_SC->PCONP |= 0x00001000;
+	LPC_SC->PCONP |= 1<<12;
 	LPC_ADC->ADCR = (1 << 2) | (4 << 8) | (1 << 21); 
 	while(1)
 	{
@@ -215,37 +275,36 @@ __task void changeSpeed()
 		os_tsk_pass();
 	}
 }
-
+*/
 __task void start_tasks()
 {
-	os_tsk_create(changeSpeed, 1);
+	//os_tsk_create(changeSpeed, 1);
 	os_tsk_create(moveCar, 1);
+	//os_tsk_create(moveObs, 1);
 	while(1);
 }
 
 void updateObs(void)
 {
 	int r1;
-	int r2, d1, d2, l1, l2;
+	int r2, l1, l2;
 	
 	// randomly generate IDs for 2 new obstables
 	r1 = rand() % 2;
-	d1 = rand() % 11; //replace 11 w number of divisions
 	l1 = rand() % 5;
 	
 	r2 = rand() % 2;
-	d2 = rand() % 11; //replace 11 w number of divisions
 	l2 = rand() % 5;
 	
 	obstacles[0] = obstacles[2];
 	obstacles[1] = obstacles[3];
 	
 	obstacles[2].id = r1;
-	obstacles[2].division = d1;
+	obstacles[2].division = 6;
 	obstacles[2].lane= l1;
 	
 	obstacles[2].id = r2;
-	obstacles[2].division = d2;
+	obstacles[2].division = 6;
 	obstacles[2].lane= l2;
 }
 
@@ -255,6 +314,9 @@ int main()
 	init();
 	lane = 0;
 	drawLanes();
+	
+	updateObs();
+	updateObs();
 	
 	os_sys_init(start_tasks);
 	
