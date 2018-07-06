@@ -325,7 +325,8 @@ int main()
 	obstacles[1].lane= rand() % 5;
 	
 	obstacles[2].id = rand() % 2;
-	obstacles[2].division = 6;
+	obstacles[2].division = 6
+	-;
 	obstacles[2].lane= rand() % 5;
 	
 	obstacles[3].id = rand() % 2;
