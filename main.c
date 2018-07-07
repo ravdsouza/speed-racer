@@ -13,10 +13,11 @@
 // global variables
 int lane; // 0 - 4
 int speed;
-int oneY;
-int oneX;
 float prevTime = 0;
 float time;
+int health = 3;
+int firstGame = 0;
+int distTrav = 0;
 
 // obstacle struct
 // id: 0 pothole, 1 bird
@@ -25,6 +26,7 @@ typedef struct
 	int id;
 	int division;
 	int lane;
+	int* next
 } obs_t;
 
 obs_t obstacles[6];
@@ -33,15 +35,20 @@ obs_t pot;
 // declare semaphores and mutexes
 OS_SEM moveObsSem;
 OS_SEM moveCarSem;
+OS_SEM collisionSem;
 OS_SEM changeSpeedSem;
-
-OS_MUT mut;
+OS_SEM pushButtSem;
 
 // initialize everything
 void init(void)
 {
+	// lcd
 	GLCD_Init();
+	// timer
 	timer_setup();
+	// leds
+	LPC_GPIO2->FIODIR |= 0x0000007C;
+	LPC_GPIO1->FIODIR |= 0xB0000000;
 }
 
 // draw lanes
@@ -156,14 +163,14 @@ void drawPot(obs_t p)
 void drawBird(obs_t b)
 {
 	int i, j;
-	GLCD_SetTextColor(0);
-	for(i = -15; i < 16; i++)
-		for(j = -15; j < 16; j++)
+	GLCD_SetTextColor(15); // olive
+	for(i = -10; i < 11; i++)
+		for(j = -10; j < 11; j++)
 		{
 				GLCD_PutPixel(i+24+b.division*44, j+24+b.lane*48);
 		}
 }
- 
+
 void eraseCar(void)
 {
 	int i, j;
@@ -188,7 +195,8 @@ void eraseObs(obs_t ob)
 void updateObs(void)
 {
 	int r1, r2, r3, l1, l2, l3;
-	if (obstacles[0].division <= 0)
+	printf("new obs");
+	if (obstacles[0].division < 0)
 	{
 		// randomly generate IDs for 2 new obstables
 		r1 = rand() % 2;
@@ -216,6 +224,43 @@ void updateObs(void)
 		obstacles[5].division = 6;
 		obstacles[5].lane= l3;
 	}
+}
+
+void initRestart(void)
+{
+	LPC_GPIO1->FIOSET = 0x10000000;
+	LPC_GPIO1->FIOSET = 0x20000000;
+	LPC_GPIO1->FIOSET = 0x80000000;
+	health = 3;
+	lane = 0;
+	distTrav = 0;
+	drawLanes();
+	
+	obstacles[0].id = rand() % 2;
+	obstacles[0].division = 6;
+	obstacles[0].lane = rand() % 5;
+	
+	obstacles[1].id = rand() % 2;
+	obstacles[1].division = 6;
+	obstacles[1].lane = rand() % 5;
+	
+	obstacles[2].id = rand() % 2;
+	obstacles[2].division = 6;
+	obstacles[2].lane = rand() % 5;
+	
+	obstacles[3].id = rand() % 2;
+	obstacles[3].division = 10;
+	obstacles[3].lane = rand() % 5;
+	
+	obstacles[4].id = rand() % 2;
+	obstacles[4].division = 10;
+	obstacles[4].lane = rand() % 5;
+	
+	obstacles[5].id = rand() % 2;
+	obstacles[5].division = 10;
+	obstacles[5].lane = rand() % 5;
+	
+	updateObs();
 }
 
 // change lanes
@@ -251,6 +296,7 @@ __task void moveCar (void)
 __task void moveObs(void)
 {
 	int i;
+	float time, dTime;
 	while(1)
 	{
 		os_sem_wait(&moveObsSem, 0xffff);
@@ -263,16 +309,23 @@ __task void moveObs(void)
 			else if (obstacles[i].division  < 0)
 				updateObs();		
 		}		
-		//os_dly_wait(50);
-		if(timer_read()-prevTime >= 0)
+
+		time = timer_read()/1E6;
+		dTime = time - prevTime;
+		prevTime = time;
+		if(time - prevTime >= 0)
+		{
 			for (i = 0; i < 4; i++)
 			{
 				eraseObs(obstacles[i]);
 				if (obstacles[i].division >= 0)
 					obstacles[i].division--;
 			}
-		prevTime = timer_read();			
-		os_sem_send(&moveCarSem); // change this sem so its not circular
+			distTrav++;
+		}
+		prevTime = timer_read();
+			
+		os_sem_send(&collisionSem); // change this sem so its not circular
 		os_tsk_pass();
 	}
 }
@@ -297,52 +350,104 @@ __task void changeSpeed()
 	}
 }
 */
+
+__task void collision()
+{
+	int i;
+	while(1)
+	{
+		os_sem_wait(&collisionSem, 0xffff);
+		for(i = 0; i < 4; i++)
+		{
+			if (obstacles[i].lane == lane && obstacles[i].division == 0)
+			{
+				health--;
+				if(health == 2) 
+					LPC_GPIO1->FIOCLR = 0x80000000;
+				else if(health == 1)
+					LPC_GPIO1->FIOCLR = 0x20000000;
+				else if(health == 0)
+					LPC_GPIO1->FIOCLR = 0x10000000;		
+			}
+		}
+		os_sem_send(&pushButtSem);
+		os_tsk_pass();
+	}
+}
+
+__task void pushbutton()
+{
+	while(1)
+	{
+		os_sem_wait(&pushButtSem, 0xffff);
+		if (firstGame == 0)
+		{
+			GLCD_Clear(31);
+			GLCD_SetBackColor(31);
+			GLCD_SetTextColor(65535);
+			GLCD_DisplayString(4, 4, 1, "Speed Racer ;^)");
+			while((LPC_GPIO2->FIOPIN & 0x00000400) == 0x00000400);
+			firstGame = 1;
+			initRestart();
+		}
+		else if (health == 0)
+		{
+			GLCD_Clear(31);
+			GLCD_SetBackColor(31);
+			GLCD_SetTextColor(65535);
+			GLCD_DisplayString(4, 4, 1, "FAILED :^(");
+			while((LPC_GPIO2->FIOPIN & 0x00000400) == 0x00000400);
+			initRestart();
+		}
+		else if (distTrav >= 70)
+		{
+			GLCD_Clear(31);
+			GLCD_SetBackColor(31);
+			GLCD_SetTextColor(65535);
+			GLCD_DisplayString(4, 4, 1, "Finished :^)");
+			while((LPC_GPIO2->FIOPIN & 0x00000400) == 0x00000400);
+			initRestart();
+		}
+		os_sem_send(&moveCarSem);
+		os_tsk_pass();
+	}
+}
+
+__task void potty()
+{
+	LPC_PINCON->PINSEL1 &= ~(0x03<<18);
+	LPC_PINCON->PINSEL1 |= (0x01<<18);
+	LPC_SC->PCONP |= 0x00001000;
+	LPC_ADC->ADCR = (1 << 2) | (4 << 8) | (1 << 21); 
+	while(1)
+	{
+		LPC_ADC->ADCR |= 0x01000000;
+		if(LPC_ADC->ADGDR & 0x80000000)
+			printf("potty: %d\n\n", (LPC_ADC->ADGDR & 0x0000FFF0) >> 4); 
+		os_tsk_pass();
+	}
+}
+
 __task void start_tasks()
 {
-	os_sem_init(&moveCarSem, 1);
+	os_sem_init(&moveCarSem, 0);
 	os_sem_init(&moveObsSem, 0);
+	os_sem_init(&collisionSem, 0);
+	os_sem_init(&pushButtSem, 1);
 	
 	//os_tsk_create(changeSpeed, 1);
 	os_tsk_create(moveCar, 1);
 	os_tsk_create(moveObs, 1);
+	os_tsk_create(collision, 1);
+	os_tsk_create(pushbutton, 1);
+	os_tsk_create(potty, 1);
 	while(1);
 }
-
 
 int main() 
 {	
 	printf("init");
 	init();
-	lane = 0;
-	drawLanes();
-	
-	obstacles[0].id = rand() % 2;
-	obstacles[0].division = 6;
-	obstacles[0].lane= rand() % 5;
-	
-	obstacles[1].id = rand() % 2;
-	obstacles[1].division = 6;
-	obstacles[1].lane= rand() % 5;
-	
-	obstacles[2].id = rand() % 2;
-	obstacles[2].division = 6
-	-;
-	obstacles[2].lane= rand() % 5;
-	
-	obstacles[3].id = rand() % 2;
-	obstacles[3].division = 10;
-	obstacles[3].lane= rand() % 5;
-	
-	obstacles[4].id = rand() % 2;
-	obstacles[4].division = 10;
-	obstacles[4].lane= rand() % 5;
-	
-	obstacles[5].id = rand() % 2;
-	obstacles[5].division = 10;
-	obstacles[5].lane= rand() % 5;
-	
-	updateObs();
-	
 	os_sys_init(start_tasks);
 	
 	return 0;
