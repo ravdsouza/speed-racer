@@ -8,11 +8,11 @@
 #include <RTL.h>
 #include "timer.h"
 
-#define TRACK 20
+#define TRACK 30
 
 // global variables
 int lane; // 0 - 4
-int health = 3;
+int health = 5;
 int firstGame = 0;
 int distTrav = 0;
 int healthCheck = 0;
@@ -69,9 +69,9 @@ void drawLanes()
 {
 	int i, j;
 	
-	GLCD_Clear(31727);
-	GLCD_SetBackColor(31727);
-	GLCD_SetTextColor(65535);
+	GLCD_Clear(DarkGrey);
+	GLCD_SetBackColor(DarkGrey);
+	GLCD_SetTextColor(White);
 	
 	for (i = 0; i < 320; i++)
 	{
@@ -107,7 +107,7 @@ void drawCar()
 {
 	int i, j;
 	// Black
-	GLCD_SetTextColor(0);
+	GLCD_SetTextColor(Black);
 	// Axles
 	for(i = 0; i < 4; i++)
 		for(j = 0; j < 4; j++)
@@ -142,7 +142,7 @@ void drawCar()
 			GLCD_PutPixel(i+20, j+38+lane*48);
 			
 	// Red
-	GLCD_SetTextColor(63488);
+	GLCD_SetTextColor(Red);
 	// Body
 	for(i = 0; i < 24; i++)
 		for(j = 0; j < 20; j++)
@@ -156,14 +156,14 @@ void drawCar()
 		for(j = 0; j < 36; j++)
 			GLCD_PutPixel(i+38, j+6+lane*48);
 			
-	GLCD_SetTextColor(31727);
+	GLCD_SetTextColor(DarkGrey);
 }
 
 // potholes
 void drawPot(obs_t p)
 {
 	int i, j;
-	GLCD_SetTextColor(0);
+	GLCD_SetTextColor(Black);
 	for(i = -15; i < 16; i++)
 		for(j = -15; j < 16; j++)
 		{
@@ -176,18 +176,39 @@ void drawPot(obs_t p)
 void drawBird(obs_t b)
 {
 	int i, j;
-	GLCD_SetTextColor(15); // olive
+	GLCD_SetTextColor(Yellow);
 	for(i = -10; i < 11; i++)
 		for(j = -10; j < 11; j++)
-		{
 				GLCD_PutPixel(i+24+b.division*44, j+24+b.lane*48);
-		}
+	
+	GLCD_SetTextColor(Black);
+	for(i = 0; i < 8; i++)
+		for(j = 0; j < 3; j++)
+			GLCD_PutPixel(i+6+b.division*44, j+21+b.lane*48);
+	for(i = 0; i < 8; i++)
+		for(j = 0; j < 3; j++)
+			GLCD_PutPixel(i+6+b.division*44, j+27+b.lane*48);
+
+	for(i = -1; i < 1; i++)
+		for(j = -1; j < 1; j++)
+				GLCD_PutPixel(i+30+b.division*44, j+21+b.lane*48);
+	for(i = -1; i < 1; i++)
+		for(j = -1; j < 1; j++)
+				GLCD_PutPixel(i+30+b.division*44, j+27+b.lane*48);
+	
+	GLCD_SetTextColor(Maroon);
+	for(i = -2; i < 2; i++)
+		for(j = -2; j < 2; j++)
+				GLCD_PutPixel(i+24+b.division*44, j+24+b.lane*48);
+	
+	
+		
 }
 
 void eraseCar(void)
 {
 	int i, j;
-	GLCD_SetTextColor(31727);
+	GLCD_SetTextColor(DarkGrey);
 	
 	for(i = 0; i < 44; i++)
 		for(j = 0; j < 36; j++)
@@ -197,7 +218,7 @@ void eraseCar(void)
 void eraseObs(obs_t ob)
 {
 	int i, j;
-	GLCD_SetTextColor(31727);
+	GLCD_SetTextColor(DarkGrey);
 	
 	for(i = 0; i < 44; i++)
 		for(j = 0; j < 44; j++)
@@ -244,8 +265,12 @@ void initRestart(void)
 	LPC_GPIO1->FIOSET = 0x10000000;
 	LPC_GPIO1->FIOSET = 0x20000000;
 	LPC_GPIO1->FIOSET = 0x80000000;
-	health = 3;
-	lane = 0;
+	LPC_GPIO2->FIOSET = 0x00000004;
+	LPC_GPIO2->FIOSET = 0x00000008;
+
+
+	health = 5;
+	lane = 2;
 	distTrav = 0;
 	drawLanes();
 	
@@ -282,14 +307,14 @@ void initRestart(void)
 void countdown(void)
 {
 	counter = timer_read()/1E6;
-	GLCD_Clear(31);
-	GLCD_SetBackColor(31);
-	GLCD_SetTextColor(65535);
-	GLCD_DisplayString(4, 8, 1, "3");
+	GLCD_Clear(White);
+	GLCD_SetBackColor(White);
+	GLCD_SetTextColor(Black);
+	GLCD_DisplayString(4, 9, 1, "3");
 	while(timer_read()/1E6 - counter <= 1);
-	GLCD_DisplayString(4, 8, 1, "2");
+	GLCD_DisplayString(4, 9, 1, "2");
 	while(timer_read()/1E6 - counter <= 2);
-	GLCD_DisplayString(4, 8, 1, "1");
+	GLCD_DisplayString(4, 9, 1, "1");
 	while(timer_read()/1E6 - counter <= 3);
 	GLCD_DisplayString(4, 8, 1, "Go!");
 	while(timer_read()/1E6 - counter <= 3.5);
@@ -319,7 +344,7 @@ __task void moveCar (void)
 		}
 		drawCar();
 		//while(((LPC_GPIO1->FIOPIN & 0x00800000) != 0x00800000) || (((LPC_GPIO1->FIOPIN & 0x02000000) != 0x02000000))) {}
-		os_sem_send(&collisionSem);
+		os_sem_send(&moveObsSem);
 		os_tsk_pass();		
 	}
 }
@@ -356,7 +381,7 @@ __task void moveObs(void)
 		}
 	//	prevTime = timer_read();
 		
-		os_sem_send(&moveCarSem); // change this sem so its not circular
+		os_sem_send(&collisionSem); // change this sem so its not circular
 		os_tsk_pass();
 	}
 }
@@ -369,7 +394,7 @@ __task void changeSpeed()
 		LPC_ADC->ADCR |= 0x01000000;
 		speed = ((LPC_ADC->ADGDR & 0x0000FFF0) >> 4)/4000.0;
 		printf("pot: %f\n", speed);
-		os_sem_send(&moveObsSem);
+		os_sem_send(&moveCarSem);
 		os_tsk_pass();
 	}
 }
@@ -386,7 +411,11 @@ __task void collision()
 			{
 				health--;
 				healthCheck++;
-				if(health == 2) 
+				if (health == 4)
+					LPC_GPIO2->FIOCLR = 0x00000008;
+				else if (health == 3)
+					LPC_GPIO2->FIOCLR = 0x00000004;
+				else if(health == 2) 
 					LPC_GPIO1->FIOCLR = 0x80000000;
 				else if(health == 1)
 					LPC_GPIO1->FIOCLR = 0x20000000;
@@ -411,12 +440,17 @@ __task void pushbutton()
 		}
 		else if (firstGame == 0)
 		{
-			GLCD_Clear(31);
-			GLCD_SetBackColor(31);
-			GLCD_SetTextColor(65535);
+			GLCD_Clear(Red);
+			GLCD_SetBackColor(Red);
+			GLCD_SetTextColor(Black);
 			GLCD_DisplayString(2, 4, 1, "Speed Racer!");
-			GLCD_DisplayString(10, 5, 0, "- Joystick to change lanes");
-			GLCD_DisplayString(12, 5, 0, "- Joystick to change lanes");
+			GLCD_DisplayString(10, 11, 0, "- Joystick to change lanes");
+			GLCD_DisplayString(12, 11, 0, "- Potentiometer to change speed");
+			GLCD_DisplayString(14, 11, 0, "- Pushbutton to start/restart");
+			GLCD_DisplayString(16, 11, 0, "- LED's show lives remaining");
+			GLCD_DisplayString(18, 11, 0, "- Go the distance as fast as possible");
+			GLCD_DisplayString(20, 11, 0, "- Avoid the birds and potholes");
+			GLCD_DisplayString(22, 11, 0, "- Have fun!");
 			while((LPC_GPIO2->FIOPIN & 0x00000400) == 0x00000400);
 			firstGame = 1;
 			countdown();
@@ -424,11 +458,10 @@ __task void pushbutton()
 		}
 		else if (health <= 0)
 		{
-			GLCD_Clear(31);
-			GLCD_SetBackColor(31);
-			GLCD_SetTextColor(65535);
-			GLCD_DisplayString(3, 5, 1, "FAILED :^(");
-			GLCD_DisplayString(4, 0, 1, "(pushbutton to restart)");
+			GLCD_Clear(Red);
+			GLCD_SetBackColor(Red);
+			GLCD_SetTextColor(Black);
+			GLCD_DisplayString(4, 5, 1, "FAILED :^(");
 			while((LPC_GPIO2->FIOPIN & 0x00000400) == 0x00000400);
 			countdown();
 			initRestart();
@@ -438,10 +471,10 @@ __task void pushbutton()
 			endTime = timer_read()/1E6;
 			totalTime = endTime - startTime;
 			snprintf(totalTimeC, 12, "Time: %fs", totalTime);
-			GLCD_Clear(31);
-			GLCD_SetBackColor(31);
-			GLCD_SetTextColor(65535);
-			GLCD_DisplayString(4, 4, 1, "Finished :^)");
+			GLCD_Clear(Red);
+			GLCD_SetBackColor(Red);
+			GLCD_SetTextColor(Black);
+			GLCD_DisplayString(4, 4, 1, "FINISHED :^)");
 			GLCD_DisplayString(5, 4, 1, totalTimeC);
 			
 			while((LPC_GPIO2->FIOPIN & 0x00000400) == 0x00000400);
