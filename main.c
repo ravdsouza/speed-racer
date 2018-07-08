@@ -8,15 +8,18 @@
 #include <RTL.h>
 #include "timer.h"
 
+#define TRACK 20
+
 // global variables
 int lane; // 0 - 4
-int speed;
 int health = 3;
 int firstGame = 0;
 int distTrav = 0;
+int healthCheck = 0;
+float speed;
 
 // global times
-float prevTime = 0;
+float prevTime;
 float time;
 float startTime;
 float endTime;
@@ -32,7 +35,7 @@ typedef struct
 	int division;
 	int lane;
 	int* next
-} obs_t;
+} obs_t;                                           
 
 obs_t obstacles[6];
 obs_t pot;
@@ -41,8 +44,8 @@ obs_t pot;
 OS_SEM moveObsSem;
 OS_SEM moveCarSem;
 OS_SEM collisionSem;
+OS_SEM pushbuttonSem;
 OS_SEM changeSpeedSem;
-OS_SEM pushButtSem;
 
 // initialize everything
 void init(void)
@@ -54,6 +57,11 @@ void init(void)
 	// leds
 	LPC_GPIO2->FIODIR |= 0x0000007C;
 	LPC_GPIO1->FIODIR |= 0xB0000000;
+	// potentiometer
+	LPC_PINCON->PINSEL1 &= ~(0x03<<18);
+	LPC_PINCON->PINSEL1 |= (0x01<<18);
+	LPC_SC->PCONP |= 1<<12;
+	LPC_ADC->ADCR = (1 << 2) | (4 << 8) | (1 << 21); 
 }
 
 // draw lanes
@@ -268,6 +276,7 @@ void initRestart(void)
 	updateObs();
 	
 	startTime = timer_read()/1E6;
+	prevTime = timer_read()/1E6;
 }
 
 void countdown(void)
@@ -310,7 +319,7 @@ __task void moveCar (void)
 		}
 		drawCar();
 		//while(((LPC_GPIO1->FIOPIN & 0x00800000) != 0x00800000) || (((LPC_GPIO1->FIOPIN & 0x02000000) != 0x02000000))) {}
-		os_sem_send(&moveObsSem);
+		os_sem_send(&collisionSem);
 		os_tsk_pass();		
 	}
 }
@@ -319,7 +328,6 @@ __task void moveCar (void)
 __task void moveObs(void)
 {
 	int i;
-	float time, dTime;
 	while(1)
 	{
 		os_sem_wait(&moveObsSem, 0xffff);
@@ -333,10 +341,8 @@ __task void moveObs(void)
 				updateObs();		
 		}		
 
-		time = timer_read()/1E6;
-		dTime = time - prevTime;
-		prevTime = time;
-		if(time - prevTime >= 0)
+		//time = timer_read()/1E6;
+		if(timer_read()/1E6 - prevTime >= ((1.0231/(1.0231-speed))-1.0)/1.5)
 		{
 			for (i = 0; i < 4; i++)
 			{
@@ -345,34 +351,28 @@ __task void moveObs(void)
 					obstacles[i].division--;
 			}
 			distTrav++;
+			healthCheck = distTrav;
+			prevTime = timer_read()/1E6;
 		}
-		prevTime = timer_read();
-			
-		os_sem_send(&collisionSem); // change this sem so its not circular
+	//	prevTime = timer_read();
+		
+		os_sem_send(&moveCarSem); // change this sem so its not circular
 		os_tsk_pass();
 	}
 }
 
-/*
 __task void changeSpeed()
 {
-	LPC_PINCON->PINSEL1 &= ~(0x03<<18);
-	LPC_PINCON->PINSEL1 |= (0x01<<18);
-	LPC_SC->PCONP |= 1<<12;
-	LPC_ADC->ADCR = (1 << 2) | (4 << 8) | (1 << 21); 
 	while(1)
 	{
+		os_sem_wait(&changeSpeedSem, 0xffff);
 		LPC_ADC->ADCR |= 0x01000000;
-		if(LPC_ADC->ADGDR & 0x80000000)
-		{
-			printf("potentiometer: %d\n\n", (LPC_ADC->ADGDR & 0x0000FFF0) >> 4); 
-			speed = (LPC_ADC->ADGDR & 0x0000FFF0) >> 4;
-			printf("%d", speed);
-		}
+		speed = ((LPC_ADC->ADGDR & 0x0000FFF0) >> 4)/4000.0;
+		printf("pot: %f\n", speed);
+		os_sem_send(&moveObsSem);
 		os_tsk_pass();
 	}
 }
-*/
 
 __task void collision()
 {
@@ -382,9 +382,10 @@ __task void collision()
 		os_sem_wait(&collisionSem, 0xffff);
 		for(i = 0; i < 4; i++)
 		{
-			if (obstacles[i].lane == lane && obstacles[i].division == 0)
+			if (obstacles[i].lane == lane && obstacles[i].division == 0 && distTrav == healthCheck)
 			{
 				health--;
+				healthCheck++;
 				if(health == 2) 
 					LPC_GPIO1->FIOCLR = 0x80000000;
 				else if(health == 1)
@@ -393,7 +394,7 @@ __task void collision()
 					LPC_GPIO1->FIOCLR = 0x10000000;		
 			}
 		}
-		os_sem_send(&pushButtSem);
+		os_sem_send(&pushbuttonSem);
 		os_tsk_pass();
 	}
 }
@@ -402,7 +403,7 @@ __task void pushbutton()
 {
 	while(1)
 	{
-		os_sem_wait(&pushButtSem, 0xffff);
+		os_sem_wait(&pushbuttonSem, 0xffff);
 		if ((LPC_GPIO2->FIOPIN & 0x00000400) != 0x00000400)
 		{
 			countdown();
@@ -413,23 +414,26 @@ __task void pushbutton()
 			GLCD_Clear(31);
 			GLCD_SetBackColor(31);
 			GLCD_SetTextColor(65535);
-			GLCD_DisplayString(4, 4, 1, "Speed Racer ;^)");
+			GLCD_DisplayString(2, 4, 1, "Speed Racer!");
+			GLCD_DisplayString(10, 5, 0, "- Joystick to change lanes");
+			GLCD_DisplayString(12, 5, 0, "- Joystick to change lanes");
 			while((LPC_GPIO2->FIOPIN & 0x00000400) == 0x00000400);
 			firstGame = 1;
 			countdown();
 			initRestart();
 		}
-		else if (health == 0)
+		else if (health <= 0)
 		{
 			GLCD_Clear(31);
 			GLCD_SetBackColor(31);
 			GLCD_SetTextColor(65535);
-			GLCD_DisplayString(4, 4, 1, "FAILED :^(");
+			GLCD_DisplayString(3, 5, 1, "FAILED :^(");
+			GLCD_DisplayString(4, 0, 1, "(pushbutton to restart)");
 			while((LPC_GPIO2->FIOPIN & 0x00000400) == 0x00000400);
 			countdown();
 			initRestart();
 		}
-		else if (distTrav >= 15)
+		else if (distTrav >= TRACK)
 		{
 			endTime = timer_read()/1E6;
 			totalTime = endTime - startTime;
@@ -444,22 +448,7 @@ __task void pushbutton()
 			countdown();
 			initRestart();
 		}
-		os_sem_send(&moveCarSem);
-		os_tsk_pass();
-	}
-}
-
-__task void potty()
-{
-	LPC_PINCON->PINSEL1 &= ~(0x03<<18);
-	LPC_PINCON->PINSEL1 |= (0x01<<18);
-	LPC_SC->PCONP |= 0x00001000;
-	LPC_ADC->ADCR = (1 << 2) | (4 << 8) | (1 << 21); 
-	while(1)
-	{
-		LPC_ADC->ADCR |= 0x01000000;
-		if(LPC_ADC->ADGDR & 0x80000000)
-			printf("potty: %d\n\n", (LPC_ADC->ADGDR & 0x0000FFF0) >> 4); 
+		os_sem_send(&changeSpeedSem);
 		os_tsk_pass();
 	}
 }
@@ -469,14 +458,14 @@ __task void start_tasks()
 	os_sem_init(&moveCarSem, 0);
 	os_sem_init(&moveObsSem, 0);
 	os_sem_init(&collisionSem, 0);
-	os_sem_init(&pushButtSem, 1);
+	os_sem_init(&pushbuttonSem, 1);
+	os_sem_init(&changeSpeedSem, 0);
 	
-	//os_tsk_create(changeSpeed, 1);
+	os_tsk_create(changeSpeed, 1);
 	os_tsk_create(moveCar, 1);
 	os_tsk_create(moveObs, 1);
 	os_tsk_create(collision, 1);
 	os_tsk_create(pushbutton, 1);
-	os_tsk_create(potty, 1);
 	while(1);
 }
 
