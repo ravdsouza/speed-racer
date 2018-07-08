@@ -8,16 +8,21 @@
 #include <RTL.h>
 #include "timer.h"
 
-// delay: 		os_dly_wait(300);
-
 // global variables
 int lane; // 0 - 4
 int speed;
-float prevTime = 0;
-float time;
 int health = 3;
 int firstGame = 0;
 int distTrav = 0;
+
+// global times
+float prevTime = 0;
+float time;
+float startTime;
+float endTime;
+float totalTime;
+char totalTimeC[12];
+float counter;
 
 // obstacle struct
 // id: 0 pothole, 1 bird
@@ -261,6 +266,24 @@ void initRestart(void)
 	obstacles[5].lane = rand() % 5;
 	
 	updateObs();
+	
+	startTime = timer_read()/1E6;
+}
+
+void countdown(void)
+{
+	counter = timer_read()/1E6;
+	GLCD_Clear(31);
+	GLCD_SetBackColor(31);
+	GLCD_SetTextColor(65535);
+	GLCD_DisplayString(4, 8, 1, "3");
+	while(timer_read()/1E6 - counter <= 1);
+	GLCD_DisplayString(4, 8, 1, "2");
+	while(timer_read()/1E6 - counter <= 2);
+	GLCD_DisplayString(4, 8, 1, "1");
+	while(timer_read()/1E6 - counter <= 3);
+	GLCD_DisplayString(4, 8, 1, "Go!");
+	while(timer_read()/1E6 - counter <= 3.5);
 }
 
 // change lanes
@@ -380,7 +403,12 @@ __task void pushbutton()
 	while(1)
 	{
 		os_sem_wait(&pushButtSem, 0xffff);
-		if (firstGame == 0)
+		if ((LPC_GPIO2->FIOPIN & 0x00000400) != 0x00000400)
+		{
+			countdown();
+			initRestart();
+		}
+		else if (firstGame == 0)
 		{
 			GLCD_Clear(31);
 			GLCD_SetBackColor(31);
@@ -388,6 +416,7 @@ __task void pushbutton()
 			GLCD_DisplayString(4, 4, 1, "Speed Racer ;^)");
 			while((LPC_GPIO2->FIOPIN & 0x00000400) == 0x00000400);
 			firstGame = 1;
+			countdown();
 			initRestart();
 		}
 		else if (health == 0)
@@ -397,15 +426,22 @@ __task void pushbutton()
 			GLCD_SetTextColor(65535);
 			GLCD_DisplayString(4, 4, 1, "FAILED :^(");
 			while((LPC_GPIO2->FIOPIN & 0x00000400) == 0x00000400);
+			countdown();
 			initRestart();
 		}
-		else if (distTrav >= 70)
+		else if (distTrav >= 15)
 		{
+			endTime = timer_read()/1E6;
+			totalTime = endTime - startTime;
+			snprintf(totalTimeC, 12, "Time: %fs", totalTime);
 			GLCD_Clear(31);
 			GLCD_SetBackColor(31);
 			GLCD_SetTextColor(65535);
 			GLCD_DisplayString(4, 4, 1, "Finished :^)");
+			GLCD_DisplayString(5, 4, 1, totalTimeC);
+			
 			while((LPC_GPIO2->FIOPIN & 0x00000400) == 0x00000400);
+			countdown();
 			initRestart();
 		}
 		os_sem_send(&moveCarSem);
