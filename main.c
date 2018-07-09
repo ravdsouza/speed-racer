@@ -444,7 +444,7 @@ __task void moveObs(void)
 			else if (obstacles[i].division  < 0)
 				updateObs();		
 		}		
-
+		
 		// wait before redrawing obstacles based on speed
 		if(timer_read()/1E6 - prevTime >= ((1.025/(1.025-speed))-1.0)/1.5)
 		{
