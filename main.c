@@ -9,7 +9,7 @@
 #include "timer.h"
 
 // Define track distance
-#define TRACK 70
+#define TRACK 30
 
 // global variables
 int lane; // 0 - 4
@@ -234,6 +234,58 @@ void eraseObs(obs_t ob)
 			GLCD_PutPixel(ob.division*44+i+2, j+2+ob.lane*48);
 }
 
+// Draw finish line
+void drawLine(void)
+{
+	int i, j;
+	
+	GLCD_SetTextColor(White);
+	for(i = 0; i <20; i++)
+		for(j = 0; j<240; j++)
+			GLCD_PutPixel((TRACK-distTrav-1)*44+i+12, j);	
+}
+	
+// Erase finish line
+void eraseLine(void)
+{
+	int i, j;
+	
+	GLCD_SetTextColor(DarkGrey);
+	for(i = 0; i <20; i++)
+		for(j = 0; j<240; j++)
+			GLCD_PutPixel((TRACK-distTrav-1)*44+i+12, j);	
+	
+	GLCD_SetTextColor(White);
+	
+	for (i = 0; i < 320; i++)
+	{
+		GLCD_PutPixel(i, 0);
+		GLCD_PutPixel(i, 1);
+		
+		GLCD_PutPixel(i, 238);
+		GLCD_PutPixel(i, 239);
+		
+		for (j = 0; j < 4; j++)
+		{			
+			GLCD_PutPixel(i, j+46);
+			GLCD_PutPixel(i, j+94);
+			GLCD_PutPixel(i, j+142);
+			GLCD_PutPixel(i, j+190);
+		}
+	}
+	
+	for (j = 0; j < 240; j++)
+	{
+		GLCD_PutPixel(0, j);
+		GLCD_PutPixel(1, j);
+		
+		GLCD_PutPixel(318, j);
+		GLCD_PutPixel(319, j);
+	}
+	
+}
+		
+
 // Generate and update new obstacles
 void updateObs(void)
 {
@@ -445,6 +497,11 @@ __task void moveObs(void)
 				updateObs();		
 		}		
 		
+		// Call draw finish line
+		if (distTrav + 7 >= TRACK)
+			drawLine();
+						
+		
 		// wait before redrawing obstacles based on speed
 		if(timer_read()/1E6 - prevTime >= ((1.025/(1.025-speed))-1.0)/1.5)
 		{
@@ -454,7 +511,10 @@ __task void moveObs(void)
 				if (obstacles[i].division >= 0)
 					obstacles[i].division--;
 			}
-				//printf("1: %d, %d\n2: %d, %d\n3: %d, %d\n4: %d, %d\n5: %d, %d\n6: %d, %d\n\n", obstacles[0].lane, obstacles[0].division, obstacles[1].lane, obstacles[1].division, obstacles[2].lane, obstacles[2].division, obstacles[3].lane, obstacles[3].division, obstacles[4].lane, obstacles[4].division, obstacles[5].lane, obstacles[5].division);
+			
+			// Call erase finish line
+			if (distTrav + 7 >= TRACK)
+				eraseLine();
 
 			distTrav++;
 			healthCheck = distTrav;
